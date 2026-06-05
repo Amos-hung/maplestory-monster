@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>楓之谷全能圖鑑系統</title>
+    <style>
+      body { font-family: '微軟正黑體', sans-serif; background-color: #181818; color: #e8eaed; margin: 0; padding: 20px; text-align: center; }
+      .container { max-width: 700px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
+      h2 { color: #8ab4f8; } 
+      
+      .search-box { position: relative; width: 80%; margin: 0 auto 15px auto; text-align: left; }
+      input[type="text"] { width: 100%; padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
+      input[type="text"]:focus { border-color: #8ab4f8; }
+      input[type="text"]:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
+      
+      button { padding: 12px 24px; font-size: 16px; background-color: #8ab4f8; color: #202124; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
+      button:hover { background-color: #aecbfa; }
+      button:disabled { background-color: #555; color: #888; cursor: not-allowed; }
+      
+      .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #303134; border: 1px solid #5f6368; border-radius: 0 0 8px 8px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: none; max-height: 250px; overflow-y: auto; list-style-type: none; padding: 0; margin: 0; }
+      .suggestions li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #444; color: #e8eaed; font-weight: bold; }
+      .suggestions li:hover { background-color: #3c4043; color: #8ab4f8; }
+
+      .result-list { text-align: left; margin-top: 20px; }
+      .card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #444; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #303134; }
+      .card-info { flex: 1; padding-right: 15px; } 
+      .card-info h4 { margin: 0 0 5px 0; color: #f28b82; font-size: 18px; } 
+      .card-info .item-desc { display: block; margin-top: 8px; color: #b0bec5; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+      .m-tag { background: #3c4043; color: #8ab4f8; padding: 4px 10px; border-radius: 6px; font-size: 22px; font-weight: bold; margin-bottom: 10px; display: inline-block; border: 1px solid #5f6368; }
+      .card img { max-width: 100px; max-height: 100px; object-fit: contain; background-color: transparent; border-radius: 8px; }
+      
+      #globalLoading { color: #f28b82; font-weight: bold; margin-bottom: 15px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>🔍 全能圖鑑搜尋 (GitHub 獨立版)</h2>
+      
+      <div id="globalLoading">🔄 正在連線至試算表載入圖鑑，請稍候...</div>
+      
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="資料載入中..." onkeyup="handleTyping()" autocomplete="off" disabled>
+        <ul id="suggestionBox" class="suggestions"></ul>
+      </div>
+
+      <button id="searchBtn" onclick="executeSearch()" disabled>一鍵搜查</button>
+      
+      <div id="results" class="result-list"></div>
+    </div>
+
+    <script>
+      var localDatabase = []; 
+      var timer;
+
+      // 🔴 這裡必須是你剛剛複製的 GAS 網頁應用程式網址 (結尾是 /exec)
+      var API_URL = "https://script.google.com/macros/s/AKfycbzDOHcqCkyaIaF47o4s7iXMnmn_sOLLkBaVphHtK1rViiqhSgHMd2H_eSharuLyM6U-/exec";
+
+      window.onload = function() {
+        fetch(API_URL)
+          .then(response => response.json())
+          .then(data => {
+            localDatabase = data; 
+            
+            document.getElementById('globalLoading').style.display = 'none';
+            document.getElementById('searchInput').disabled = false;
+            document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱或屬性條件...";
+            document.getElementById('searchBtn').disabled = false;
+          })
+          .catch(err => {
+            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認後端部署設定是否正確。";
+            console.error(err);
+          });
+      };
+
+      function handleTyping() {
+        var keyword = document.getElementById('searchInput').value;
+        var box = document.getElementById('suggestionBox');
+        if (keyword.length < 1) { box.style.display = 'none'; return; }
+        
+        clearTimeout(timer);
+        timer = setTimeout(function() {
+          var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
+          var suggestions = [];
+          var uniqueCheck = {};
+          
+          for (var i = 0; i < localDatabase.length; i++) {
+            var mName = localDatabase[i].monster;
+            var iName = localDatabase[i].item;
+            
+            if (mName && mName.toLowerCase().indexOf(cleanKeyword) !== -1 && !uniqueCheck[mName]) {
+              uniqueCheck[mName] = true; suggestions.push(mName);
+            }
+            if (iName && iName.toLowerCase().indexOf(cleanKeyword) !== -1 && !uniqueCheck[iName]) {
+              uniqueCheck[iName] = true; suggestions.push(iName);
+            }
+            if (suggestions.length >= 10) break;
+          }
+          showSuggestions(suggestions);
+        }, 150);
+      }
+
+      function showSuggestions(list) {
+        var box = document.getElementById('suggestionBox');
+        box.innerHTML = '';
+        if (list.length === 0) { box.style.display = 'none'; return; }
+        
+        for (var i = 0; i < list.length; i++) {
+          var li = document.createElement('li');
+          li.innerText = list[i];
+          li.onclick = function() {
+            document.getElementById('searchInput').value = this.innerText;
+            box.style.display = 'none';
+            executeSearch();
+          };
+          box.appendChild(li);
+        }
+        box.style.display = 'block';
+      }
+
+      document.addEventListener('click', function(e) {
+        if(e.target.id !== 'searchInput') {
+          document.getElementById('suggestionBox').style.display = 'none';
+        }
+      });
+
+      function executeSearch() {
+        var keyword = document.getElementById('searchInput').value;
+        if(!keyword) return;
+        
+        document.getElementById('suggestionBox').style.display = 'none';
+        var container = document.getElementById('results');
+        container.innerHTML = '';
+        
+        var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
+        var resultData = [];
+
+        for (var i = 0; i < localDatabase.length; i++) {
+          if (localDatabase[i].searchStr.indexOf(cleanKeyword) !== -1) {
+            resultData.push(localDatabase[i]);
+          }
+        }
+        renderResults(resultData);
+      }
+
+      function renderResults(data) {
+        var container = document.getElementById('results');
+        if(data.length === 0) {
+          container.innerHTML = '<p style="text-align:center; color:#f28b82;">資料庫中找不到符合的結果 😢</p>';
+          return;
+        }
+
+        for(var i=0; i<data.length; i++) {
+          var d = data[i];
+          var card = document.createElement('div');
+          card.className = 'card';
+          var htmlStr = '';
+          
+          htmlStr += '<div class="card-info">';
+          htmlStr += '<span class="m-tag">[Lv. ' + d.level + '] ' + d.monster + '</span>';
+          htmlStr += '<h4>' + d.item + '</h4>';
+          if (d.desc) { htmlStr += '<span class="item-desc">' + d.desc + '</span>'; }
+          htmlStr += '</div>';
+
+          if (d.image) { htmlStr += '<img src="' + d.image + '" onerror="this.style.display=\'none\'">'; }
+          
+          card.innerHTML = htmlStr;
+          container.appendChild(card);
+        }
+      }
+    </script>
+  </body>
+</html>
