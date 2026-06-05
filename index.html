@@ -6,19 +6,23 @@
     <title>楓之谷全能圖鑑系統</title>
     <style>
       body { font-family: '微軟正黑體', sans-serif; background-color: #181818; color: #e8eaed; margin: 0; padding: 20px; text-align: center; }
-      .container { max-width: 700px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
+      .container { max-width: 800px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
       h2 { color: #8ab4f8; } 
       
-      /* --- 新增：將搜尋列與等級框排在同一行 --- */
-      .search-row { display: flex; gap: 10px; align-items: center; width: 85%; margin: 0 auto 15px auto; }
-      .search-box { flex: 1; position: relative; text-align: left; }
+      /* --- 排版升級：支援多欄位與手機版自動換行 --- */
+      .search-row { display: flex; gap: 10px; align-items: center; width: 100%; margin: 0 auto 15px auto; flex-wrap: wrap; justify-content: center; }
+      .search-box { flex: 1; min-width: 250px; position: relative; text-align: left; }
       
-      input[type="text"], input[type="number"] { padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
+      input[type="text"], input[type="number"], select { 
+        padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; 
+        border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; 
+      }
       input[type="text"] { width: 100%; }
       input[type="number"] { width: 80px; text-align: center; }
+      select { cursor: pointer; }
       
-      input[type="text"]:focus, input[type="number"]:focus { border-color: #8ab4f8; }
-      input[type="text"]:disabled, input[type="number"]:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
+      input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: #8ab4f8; }
+      input[type="text"]:disabled, input[type="number"]:disabled, select:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
       
       button { padding: 12px 24px; font-size: 16px; background-color: #8ab4f8; color: #202124; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
       button:hover { background-color: #aecbfa; }
@@ -37,6 +41,7 @@
       .card img { max-width: 100px; max-height: 100px; object-fit: contain; background-color: transparent; border-radius: 8px; }
       
       #globalLoading { color: #f28b82; font-weight: bold; margin-bottom: 15px; }
+      .result-count { color: #b0bec5; font-size: 14px; margin-bottom: 10px; text-align: right; }
     </style>
   </head>
   <body>
@@ -50,6 +55,12 @@
           <input type="text" id="searchInput" placeholder="資料載入中..." onkeyup="handleTyping()" autocomplete="off" disabled>
           <ul id="suggestionBox" class="suggestions"></ul>
         </div>
+        
+        <select id="levelType" disabled>
+          <option value="monster">過濾怪物等級</option>
+          <option value="item">過濾裝備限制</option>
+        </select>
+        
         <input type="number" id="minLevel" placeholder="Min" min="1" disabled>
         <span style="font-weight: bold;">-</span>
         <input type="number" id="maxLevel" placeholder="Max" min="1" disabled>
@@ -64,7 +75,7 @@
       var localDatabase = []; 
       var timer;
 
-      // 🔴 請確保這裡是你最新的 GAS 網址
+      // 你的 GAS 網址保持不變
       var API_URL = "https://script.google.com/macros/s/AKfycbxgCiepnE53iqDgWgs8KUra5CSuEFwnTZ9peGDVlX7AoQ2ftQczxCG8War2lyfcq7F0/exec";
 
       window.onload = function() {
@@ -76,6 +87,7 @@
             document.getElementById('globalLoading').style.display = 'none';
             document.getElementById('searchInput').disabled = false;
             document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱...";
+            document.getElementById('levelType').disabled = false;
             document.getElementById('minLevel').disabled = false;
             document.getElementById('maxLevel').disabled = false;
             document.getElementById('searchBtn').disabled = false;
@@ -137,79 +149,91 @@
         }
       });
 
-      // --- 核心邏輯升級：支援等級區間 ---
       function executeSearch() {
         var keyword = document.getElementById('searchInput').value;
         var minStr = document.getElementById('minLevel').value;
         var maxStr = document.getElementById('maxLevel').value;
+        var levelType = document.getElementById('levelType').value;
 
-        // 如果全部沒填就按搜尋，直接擋掉，避免跑全部資料
         if (!keyword && !minStr && !maxStr) return;
         
         document.getElementById('suggestionBox').style.display = 'none';
         var container = document.getElementById('results');
-        container.innerHTML = '';
+        container.innerHTML = '<div style="color: #8ab4f8; font-weight: bold; text-align: center;">載入中...</div>';
         
-        var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
-        
-        // 處理等級設定：如果沒輸入，就預設為 0 到 9999 級
-        var minLv = minStr === "" ? 0 : parseInt(minStr);
-        var maxLv = maxStr === "" ? 9999 : parseInt(maxStr);
+        // 使用 setTimeout 讓瀏覽器有時間畫出「載入中」的文字，避免畫面瞬間凍結
+        setTimeout(function() {
+          var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
+          var minLv = minStr === "" ? 0 : parseInt(minStr);
+          var maxLv = maxStr === "" ? 9999 : parseInt(maxStr);
 
-        var resultData = [];
+          var resultData = [];
 
-        for (var i = 0; i < localDatabase.length; i++) {
-          var d = localDatabase[i];
-          var mLevel = parseInt(d.level) || 0; // 將資料庫字串轉為數字
+          for (var i = 0; i < localDatabase.length; i++) {
+            var d = localDatabase[i];
+            
+            var targetLevel = 0;
+            if (levelType === 'monster') {
+              targetLevel = parseInt(d.level) || 0;
+            } else {
+              var match = String(d.reqLevel).match(/\d+/);
+              targetLevel = match ? parseInt(match[0]) : 0;
+            }
 
-          // 條件 1：等級是否在區間內
-          var levelMatch = (mLevel >= minLv && mLevel <= maxLv);
+            var levelMatch = false;
+            if (levelType === 'item' && targetLevel === 0 && minLv > 0) {
+               levelMatch = false;
+            } else {
+               levelMatch = (targetLevel >= minLv && targetLevel <= maxLv);
+            }
+            
+            var keywordMatch = true;
+            if (cleanKeyword !== "") {
+              keywordMatch = (d.searchStr.indexOf(cleanKeyword) !== -1);
+            }
+
+            if (levelMatch && keywordMatch) {
+              resultData.push(d);
+            }
+          }
           
-          // 條件 2：關鍵字是否吻合 (如果有輸入的話)
-          var keywordMatch = true;
-          if (cleanKeyword !== "") {
-            keywordMatch = (d.searchStr.indexOf(cleanKeyword) !== -1);
-          }
-
-          // 兩個條件都符合才抓出來
-          if (levelMatch && keywordMatch) {
-            resultData.push(d);
-          }
-        }
-        
-        // 防呆機制：如果符合的結果超過 300 筆，提醒縮小範圍以免卡死
-        if (resultData.length > 300) {
-          container.innerHTML = '<p style="text-align:center; color:#f28b82;">⚠️ 搜尋結果太多 (' + resultData.length + ' 筆)，請輸入更精確的名稱或縮小等級區間！</p>';
-          return;
-        }
-
-        renderResults(resultData);
+          // 已經將筆數限制完全移除，直接渲染所有結果
+          renderResults(resultData);
+        }, 50);
       }
 
       function renderResults(data) {
         var container = document.getElementById('results');
+        container.innerHTML = ''; // 清除「載入中」文字
+        
         if(data.length === 0) {
           container.innerHTML = '<p style="text-align:center; color:#f28b82;">資料庫中找不到符合的結果 😢</p>';
           return;
         }
 
+        // 貼心小功能：在最上方顯示總共找到幾筆資料
+        var countHeader = document.createElement('div');
+        countHeader.className = 'result-count';
+        countHeader.innerText = '✅ 共找到 ' + data.length + ' 筆結果';
+        container.appendChild(countHeader);
+
+        // 一次性將所有結果轉換為 HTML 字串再放入，優化大量資料渲染的效能
+        var finalHtml = '';
         for(var i=0; i<data.length; i++) {
           var d = data[i];
-          var card = document.createElement('div');
-          card.className = 'card';
-          var htmlStr = '';
-          
-          htmlStr += '<div class="card-info">';
+          var htmlStr = '<div class="card"><div class="card-info">';
           htmlStr += '<span class="m-tag">[Lv. ' + d.level + '] ' + d.monster + '</span>';
           htmlStr += '<h4>' + d.item + '</h4>';
           if (d.desc) { htmlStr += '<span class="item-desc">' + d.desc + '</span>'; }
           htmlStr += '</div>';
-
           if (d.image) { htmlStr += '<img src="' + d.image + '" onerror="this.style.display=\'none\'">'; }
+          htmlStr += '</div>';
           
-          card.innerHTML = htmlStr;
-          container.appendChild(card);
+          finalHtml += htmlStr;
         }
+        
+        // 為了效能，一次把好幾百筆的 HTML 塞入 DOM，而不是跑迴圈慢慢塞
+        container.insertAdjacentHTML('beforeend', finalHtml);
       }
     </script>
   </body>
