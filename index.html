@@ -73,10 +73,11 @@
       var localDatabase = []; 
       var timer;
 
-      // 🔴 這裡必須是你複製的 GAS 網頁應用程式網址 (結尾是 /exec)
+     // 🔴 這裡請貼上你剛剛複製的 GAS 網址 (結尾「絕對」要是 /exec)
       var API_URL = "https://script.google.com/macros/s/AKfycbxMJdtwGhsWRrK7Yty1oWorEFMs_tbBMUQ9vS60DqYKwsMAhRy5wIqB0NTPcBc0iEnw/exec";
 
       window.onload = function() {
+        // 移除防快取參數，使用最單純的 fetch 避免 Google 阻擋
         fetch(API_URL)
           .then(response => response.json())
           .then(data => {
@@ -90,11 +91,10 @@
             document.getElementById('searchBtn').disabled = false;
           })
           .catch(err => {
-            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認後端部署設定是否正確。";
+            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認後端網址是否為 /exec 結尾。";
             console.error(err);
           });
       };
-
       function handleTyping() {
         var keyword = document.getElementById('searchInput').value;
         var box = document.getElementById('suggestionBox');
