@@ -9,18 +9,14 @@
       .container { max-width: 700px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
       h2 { color: #8ab4f8; } 
       
-      /* 調整為左右排版：左邊主搜尋，右邊區間搜尋 */
       .search-wrapper { display: flex; gap: 10px; width: 80%; margin: 0 auto 15px auto; align-items: center; }
       .search-box { position: relative; flex: 2; text-align: left; }
-      
-      /* 新增：等級區間的排版 */
       .lv-range-box { display: flex; flex: 1; gap: 5px; align-items: center; }
       
       input[type="text"], input[type="number"] { width: 100%; padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
       input[type="text"]:focus, input[type="number"]:focus { border-color: #8ab4f8; }
       input:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
       
-      /* 讓數字輸入框的文字置中，看起來更整齊 */
       input[type="number"] { text-align: center; padding: 12px 5px; }
       input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       
@@ -73,16 +69,17 @@
       var localDatabase = []; 
       var timer;
 
-     // 🔴 這裡請貼上你剛剛複製的 GAS 網址 (結尾「絕對」要是 /exec)
+      // 已經為你替換成正確的 API 網址
       var API_URL = "https://script.google.com/macros/s/AKfycbxMJdtwGhsWRrK7Yty1oWorEFMs_tbBMUQ9vS60DqYKwsMAhRy5wIqB0NTPcBc0iEnw/exec";
 
       window.onload = function() {
-        // 移除防快取參數，使用最單純的 fetch 避免 Google 阻擋
+        // 使用最標準的 fetch，避免觸發 Google 的 CORS 阻擋
         fetch(API_URL)
           .then(response => response.json())
           .then(data => {
             localDatabase = data; 
             
+            // 資料載入成功，解除畫面鎖定
             document.getElementById('globalLoading').style.display = 'none';
             document.getElementById('searchInput').disabled = false;
             document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱...";
@@ -91,10 +88,12 @@
             document.getElementById('searchBtn').disabled = false;
           })
           .catch(err => {
-            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認後端網址是否為 /exec 結尾。";
+            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認後端網址是否正確。";
             console.error(err);
           });
       };
+
+      // 智慧關聯字推薦
       function handleTyping() {
         var keyword = document.getElementById('searchInput').value;
         var box = document.getElementById('suggestionBox');
@@ -146,15 +145,12 @@
         }
       });
 
-      // 核心進化：數值區間篩選
+      // 執行搜尋與多重篩選
       function executeSearch() {
         var keyword = document.getElementById('searchInput').value.replace(/\s+/g, '').toLowerCase();
+        var minLv = parseInt(document.getElementById('minLv').value, 10);
+        var maxLv = parseInt(document.getElementById('maxLv').value, 10);
         
-        // 抓取 Min 和 Max 的數值，如果沒有填寫就當作 NaN (Not a Number)
-        var minLv = parseInt(document.getElementById('minLv').value);
-        var maxLv = parseInt(document.getElementById('maxLv').value);
-        
-        // 如果三個框都空著，不執行搜尋
         if(!keyword && isNaN(minLv) && isNaN(maxLv)) return;
         
         document.getElementById('suggestionBox').style.display = 'none';
@@ -168,25 +164,20 @@
           var matchKeyword = true;
           var matchReqLv = true;
 
-          // 條件一：關鍵字
+          // 比對文字
           if (keyword) {
             matchKeyword = d.searchStr && d.searchStr.indexOf(keyword) !== -1;
           }
           
-          // 條件二：裝備等級區間 (只有在玩家有輸入數字時才啟動)
+          // 比對裝備等級區間
           if (!isNaN(minLv) || !isNaN(maxLv)) {
-            // 用正規表達式 (Regex) 把 F 欄位裡的「純數字」強制抓出來
-            // 例如 "限制等級 50" 會變成 [50]
             var numMatch = d.reqLevel ? d.reqLevel.toString().match(/\d+/) : null;
             
             if (numMatch) {
-              var equipLv = parseInt(numMatch[0]); // 把抓出來的字串轉換成真正的數學數字
-              
-              // 數學區間比對
-              if (!isNaN(minLv) && equipLv < minLv) matchReqLv = false; // 裝備等級小於下限，淘汰
-              if (!isNaN(maxLv) && equipLv > maxLv) matchReqLv = false; // 裝備等級大於上限，淘汰
+              var equipLv = parseInt(numMatch[0], 10);
+              if (!isNaN(minLv) && equipLv < minLv) matchReqLv = false;
+              if (!isNaN(maxLv) && equipLv > maxLv) matchReqLv = false;
             } else {
-              // 如果玩家要搜裝備等級，但這個掉落物沒有等級 (例如紅藥水)，直接淘汰
               matchReqLv = false;
             }
           }
@@ -198,6 +189,7 @@
         renderResults(resultData);
       }
 
+      // 渲染畫面
       function renderResults(data) {
         var container = document.getElementById('results');
         if(data.length === 0) {
