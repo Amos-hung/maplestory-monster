@@ -9,16 +9,16 @@
       .container { max-width: 700px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
       h2 { color: #8ab4f8; } 
       
-      .search-wrapper { display: flex; gap: 10px; width: 80%; margin: 0 auto 15px auto; align-items: center; }
-      .search-box { position: relative; flex: 2; text-align: left; }
-      .lv-range-box { display: flex; flex: 1; gap: 5px; align-items: center; }
+      /* --- 新增：將搜尋列與等級框排在同一行 --- */
+      .search-row { display: flex; gap: 10px; align-items: center; width: 85%; margin: 0 auto 15px auto; }
+      .search-box { flex: 1; position: relative; text-align: left; }
       
-      input[type="text"], input[type="number"] { width: 100%; padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
+      input[type="text"], input[type="number"] { padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
+      input[type="text"] { width: 100%; }
+      input[type="number"] { width: 80px; text-align: center; }
+      
       input[type="text"]:focus, input[type="number"]:focus { border-color: #8ab4f8; }
-      input:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
-      
-      input[type="number"] { text-align: center; padding: 12px 5px; }
-      input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+      input[type="text"]:disabled, input[type="number"]:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
       
       button { padding: 12px 24px; font-size: 16px; background-color: #8ab4f8; color: #202124; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
       button:hover { background-color: #aecbfa; }
@@ -31,12 +31,9 @@
       .result-list { text-align: left; margin-top: 20px; }
       .card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #444; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #303134; }
       .card-info { flex: 1; padding-right: 15px; } 
-      .card-info h4 { margin: 0 0 5px 0; color: #f28b82; font-size: 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; } 
+      .card-info h4 { margin: 0 0 5px 0; color: #f28b82; font-size: 18px; } 
       .card-info .item-desc { display: block; margin-top: 8px; color: #b0bec5; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
-      
       .m-tag { background: #3c4043; color: #8ab4f8; padding: 4px 10px; border-radius: 6px; font-size: 22px; font-weight: bold; margin-bottom: 10px; display: inline-block; border: 1px solid #5f6368; }
-      .req-tag { background: #5f6368; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: normal; }
-      
       .card img { max-width: 100px; max-height: 100px; object-fit: contain; background-color: transparent; border-radius: 8px; }
       
       #globalLoading { color: #f28b82; font-weight: bold; margin-bottom: 15px; }
@@ -46,18 +43,16 @@
     <div class="container">
       <h2>🔍 全能圖鑑搜尋 (GitHub 獨立版)</h2>
       
-      <div id="globalLoading">🔄 正在連線至資料庫，請稍候...</div>
+      <div id="globalLoading">🔄 正在連線至試算表載入圖鑑，請稍候...</div>
       
-      <div class="search-wrapper">
+      <div class="search-row">
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="資料載入中..." onkeyup="handleTyping()" autocomplete="off" disabled>
           <ul id="suggestionBox" class="suggestions"></ul>
         </div>
-        <div class="lv-range-box">
-          <input type="number" id="minLv" placeholder="Min" onkeyup="executeSearch()" disabled>
-          <span style="color: #9aa0a6;">-</span>
-          <input type="number" id="maxLv" placeholder="Max" onkeyup="executeSearch()" disabled>
-        </div>
+        <input type="number" id="minLevel" placeholder="Min" min="1" disabled>
+        <span style="font-weight: bold;">-</span>
+        <input type="number" id="maxLevel" placeholder="Max" min="1" disabled>
       </div>
 
       <button id="searchBtn" onclick="executeSearch()" disabled>一鍵搜查</button>
@@ -69,31 +64,25 @@
       var localDatabase = []; 
       var timer;
 
-      // 使用你最新提供的正確部署網址
-      var API_URL = "https://script.google.com/macros/s/AKfycbxgCiepnE53iqDgWgs8KUra5CSuEFwnTZ9peGDVlX7AoQ2ftQczxCG8War2lyfcq7F0/exec";
+      // 🔴 請確保這裡是你最新的 GAS 網址
+      var API_URL = "https://script.google.com/macros/s/AKfycbwkr6wxuQn-CRyLRn28vA55nD-HoWl_0uWNCCWsdsDkUuYHRQhzcmD14YU_LrC28slz/exec";
 
       window.onload = function() {
-        // 加入 { redirect: 'follow' }，強迫瀏覽器順利跟隨 Google 的安全轉址，這是跨域請求成功的關鍵
-        fetch(API_URL, { redirect: 'follow' })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error('網路回應不成功');
-            }
-            return response.json();
-          })
+        fetch(API_URL)
+          .then(response => response.json())
           .then(data => {
             localDatabase = data; 
             
             document.getElementById('globalLoading').style.display = 'none';
             document.getElementById('searchInput').disabled = false;
             document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱...";
-            document.getElementById('minLv').disabled = false;
-            document.getElementById('maxLv').disabled = false;
+            document.getElementById('minLevel').disabled = false;
+            document.getElementById('maxLevel').disabled = false;
             document.getElementById('searchBtn').disabled = false;
           })
           .catch(err => {
-            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認 Apps Script 權限是否設為「所有人」。";
-            console.error("Fetch Error:", err);
+            document.getElementById('globalLoading').innerText = "❌ 資料載入失敗，請確認後端部署設定是否正確。";
+            console.error(err);
           });
       };
 
@@ -148,44 +137,52 @@
         }
       });
 
+      // --- 核心邏輯升級：支援等級區間 ---
       function executeSearch() {
-        var keyword = document.getElementById('searchInput').value.replace(/\s+/g, '').toLowerCase();
-        var minLv = parseInt(document.getElementById('minLv').value, 10);
-        var maxLv = parseInt(document.getElementById('maxLv').value, 10);
-        
-        if(!keyword && isNaN(minLv) && isNaN(maxLv)) return;
+        var keyword = document.getElementById('searchInput').value;
+        var minStr = document.getElementById('minLevel').value;
+        var maxStr = document.getElementById('maxLevel').value;
+
+        // 如果全部沒填就按搜尋，直接擋掉，避免跑全部資料
+        if (!keyword && !minStr && !maxStr) return;
         
         document.getElementById('suggestionBox').style.display = 'none';
         var container = document.getElementById('results');
         container.innerHTML = '';
         
+        var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
+        
+        // 處理等級設定：如果沒輸入，就預設為 0 到 9999 級
+        var minLv = minStr === "" ? 0 : parseInt(minStr);
+        var maxLv = maxStr === "" ? 9999 : parseInt(maxStr);
+
         var resultData = [];
 
         for (var i = 0; i < localDatabase.length; i++) {
           var d = localDatabase[i];
-          var matchKeyword = true;
-          var matchReqLv = true;
+          var mLevel = parseInt(d.level) || 0; // 將資料庫字串轉為數字
 
-          if (keyword) {
-            matchKeyword = d.searchStr && d.searchStr.indexOf(keyword) !== -1;
-          }
+          // 條件 1：等級是否在區間內
+          var levelMatch = (mLevel >= minLv && mLevel <= maxLv);
           
-          if (!isNaN(minLv) || !isNaN(maxLv)) {
-            var numMatch = d.reqLevel ? d.reqLevel.toString().match(/\d+/) : null;
-            
-            if (numMatch) {
-              var equipLv = parseInt(numMatch[0], 10);
-              if (!isNaN(minLv) && equipLv < minLv) matchReqLv = false;
-              if (!isNaN(maxLv) && equipLv > maxLv) matchReqLv = false;
-            } else {
-              matchReqLv = false;
-            }
+          // 條件 2：關鍵字是否吻合 (如果有輸入的話)
+          var keywordMatch = true;
+          if (cleanKeyword !== "") {
+            keywordMatch = (d.searchStr.indexOf(cleanKeyword) !== -1);
           }
 
-          if (matchKeyword && matchReqLv) {
+          // 兩個條件都符合才抓出來
+          if (levelMatch && keywordMatch) {
             resultData.push(d);
           }
         }
+        
+        // 防呆機制：如果符合的結果超過 300 筆，提醒縮小範圍以免卡死
+        if (resultData.length > 300) {
+          container.innerHTML = '<p style="text-align:center; color:#f28b82;">⚠️ 搜尋結果太多 (' + resultData.length + ' 筆)，請輸入更精確的名稱或縮小等級區間！</p>';
+          return;
+        }
+
         renderResults(resultData);
       }
 
@@ -204,13 +201,7 @@
           
           htmlStr += '<div class="card-info">';
           htmlStr += '<span class="m-tag">[Lv. ' + d.level + '] ' + d.monster + '</span>';
-          
-          htmlStr += '<h4><span>' + d.item + '</span>';
-          if (d.reqLevel) { 
-            htmlStr += '<span class="req-tag">限制 Lv. ' + d.reqLevel + '</span>'; 
-          }
-          htmlStr += '</h4>';
-
+          htmlStr += '<h4>' + d.item + '</h4>';
           if (d.desc) { htmlStr += '<span class="item-desc">' + d.desc + '</span>'; }
           htmlStr += '</div>';
 
