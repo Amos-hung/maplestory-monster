@@ -6,12 +6,12 @@
     <title>楓之谷全能圖鑑系統</title>
     <style>
       body { font-family: '微軟正黑體', sans-serif; background-color: #181818; color: #e8eaed; margin: 0; padding: 20px; text-align: center; }
-      .container { max-width: 800px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
+      .container { max-width: 900px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
       h2 { color: #8ab4f8; } 
       
-      /* --- 排版升級：支援多欄位與手機版自動換行 --- */
+      /* --- 排版：支援多欄位與自動換行 --- */
       .search-row { display: flex; gap: 10px; align-items: center; width: 100%; margin: 0 auto 15px auto; flex-wrap: wrap; justify-content: center; }
-      .search-box { flex: 1; min-width: 250px; position: relative; text-align: left; }
+      .search-box { flex: 1; min-width: 200px; position: relative; text-align: left; }
       
       input[type="text"], input[type="number"], select { 
         padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; 
@@ -64,6 +64,14 @@
         <input type="number" id="minLevel" placeholder="Min" min="1" disabled>
         <span style="font-weight: bold;">-</span>
         <input type="number" id="maxLevel" placeholder="Max" min="1" disabled>
+
+        <select id="sortType" disabled>
+          <option value="default">預設排列</option>
+          <option value="monster_asc">怪物等級：低 → 高</option>
+          <option value="monster_desc">怪物等級：高 → 低</option>
+          <option value="item_asc">裝備限制：低 → 高</option>
+          <option value="item_desc">裝備限制：高 → 低</option>
+        </select>
       </div>
 
       <button id="searchBtn" onclick="executeSearch()" disabled>一鍵搜查</button>
@@ -75,7 +83,6 @@
       var localDatabase = []; 
       var timer;
 
-      // 你的 GAS 網址保持不變
       var API_URL = "https://script.google.com/macros/s/AKfycbxgCiepnE53iqDgWgs8KUra5CSuEFwnTZ9peGDVlX7AoQ2ftQczxCG8War2lyfcq7F0/exec";
 
       window.onload = function() {
@@ -90,6 +97,7 @@
             document.getElementById('levelType').disabled = false;
             document.getElementById('minLevel').disabled = false;
             document.getElementById('maxLevel').disabled = false;
+            document.getElementById('sortType').disabled = false; // 啟用排序選單
             document.getElementById('searchBtn').disabled = false;
           })
           .catch(err => {
@@ -154,6 +162,7 @@
         var minStr = document.getElementById('minLevel').value;
         var maxStr = document.getElementById('maxLevel').value;
         var levelType = document.getElementById('levelType').value;
+        var sortType = document.getElementById('sortType').value; // 取得排序設定
 
         if (!keyword && !minStr && !maxStr) return;
         
@@ -161,7 +170,6 @@
         var container = document.getElementById('results');
         container.innerHTML = '<div style="color: #8ab4f8; font-weight: bold; text-align: center;">載入中...</div>';
         
-        // 使用 setTimeout 讓瀏覽器有時間畫出「載入中」的文字，避免畫面瞬間凍結
         setTimeout(function() {
           var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
           var minLv = minStr === "" ? 0 : parseInt(minStr);
@@ -169,6 +177,7 @@
 
           var resultData = [];
 
+          // 1. 篩選資料
           for (var i = 0; i < localDatabase.length; i++) {
             var d = localDatabase[i];
             
@@ -197,27 +206,46 @@
             }
           }
           
-          // 已經將筆數限制完全移除，直接渲染所有結果
+          // 2. 新增：排序邏輯
+          if (sortType !== 'default') {
+            resultData.sort(function(a, b) {
+              // 提取怪物等級數字
+              var aMonLv = parseInt(a.level) || 0;
+              var bMonLv = parseInt(b.level) || 0;
+              
+              // 提取裝備限制等級數字
+              var aMatch = String(a.reqLevel).match(/\d+/);
+              var bMatch = String(b.reqLevel).match(/\d+/);
+              var aItemLv = aMatch ? parseInt(aMatch[0]) : 0;
+              var bItemLv = bMatch ? parseInt(bMatch[0]) : 0;
+
+              if (sortType === 'monster_asc') return aMonLv - bMonLv;
+              if (sortType === 'monster_desc') return bMonLv - aMonLv;
+              if (sortType === 'item_asc') return aItemLv - bItemLv;
+              if (sortType === 'item_desc') return bItemLv - aItemLv;
+              return 0;
+            });
+          }
+          
+          // 3. 渲染輸出
           renderResults(resultData);
         }, 50);
       }
 
       function renderResults(data) {
         var container = document.getElementById('results');
-        container.innerHTML = ''; // 清除「載入中」文字
+        container.innerHTML = ''; 
         
         if(data.length === 0) {
           container.innerHTML = '<p style="text-align:center; color:#f28b82;">資料庫中找不到符合的結果 😢</p>';
           return;
         }
 
-        // 貼心小功能：在最上方顯示總共找到幾筆資料
         var countHeader = document.createElement('div');
         countHeader.className = 'result-count';
         countHeader.innerText = '✅ 共找到 ' + data.length + ' 筆結果';
         container.appendChild(countHeader);
 
-        // 一次性將所有結果轉換為 HTML 字串再放入，優化大量資料渲染的效能
         var finalHtml = '';
         for(var i=0; i<data.length; i++) {
           var d = data[i];
@@ -232,7 +260,6 @@
           finalHtml += htmlStr;
         }
         
-        // 為了效能，一次把好幾百筆的 HTML 塞入 DOM，而不是跑迴圈慢慢塞
         container.insertAdjacentHTML('beforeend', finalHtml);
       }
     </script>
