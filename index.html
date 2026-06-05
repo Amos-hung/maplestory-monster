@@ -9,10 +9,17 @@
       .container { max-width: 700px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
       h2 { color: #8ab4f8; } 
       
-      .search-box { position: relative; width: 80%; margin: 0 auto 15px auto; text-align: left; }
-      input[type="text"] { width: 100%; padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
-      input[type="text"]:focus { border-color: #8ab4f8; }
-      input[type="text"]:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
+      /* 調整搜尋區塊排版，改為左右並排 */
+      .search-wrapper { display: flex; gap: 10px; width: 80%; margin: 0 auto 15px auto; }
+      .search-box { position: relative; flex: 3; text-align: left; }
+      .filter-box { flex: 1; }
+      
+      input[type="text"], input[type="number"] { width: 100%; padding: 12px; font-size: 16px; background-color: #303134; color: #e8eaed; border: 2px solid #5f6368; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
+      input[type="text"]:focus, input[type="number"]:focus { border-color: #8ab4f8; }
+      input:disabled { background-color: #2a2a2a; color: #777; cursor: not-allowed; }
+      
+      /* 隱藏數字輸入框的上下箭頭 */
+      input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
       
       button { padding: 12px 24px; font-size: 16px; background-color: #8ab4f8; color: #202124; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
       button:hover { background-color: #aecbfa; }
@@ -25,9 +32,13 @@
       .result-list { text-align: left; margin-top: 20px; }
       .card { display: flex; align-items: center; justify-content: space-between; border: 1px solid #444; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #303134; }
       .card-info { flex: 1; padding-right: 15px; } 
-      .card-info h4 { margin: 0 0 5px 0; color: #f28b82; font-size: 18px; } 
+      .card-info h4 { margin: 0 0 5px 0; color: #f28b82; font-size: 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; } 
       .card-info .item-desc { display: block; margin-top: 8px; color: #b0bec5; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+      
       .m-tag { background: #3c4043; color: #8ab4f8; padding: 4px 10px; border-radius: 6px; font-size: 22px; font-weight: bold; margin-bottom: 10px; display: inline-block; border: 1px solid #5f6368; }
+      /* 新增：裝備等級專屬標籤的樣式 */
+      .req-tag { background: #5f6368; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: normal; }
+      
       .card img { max-width: 100px; max-height: 100px; object-fit: contain; background-color: transparent; border-radius: 8px; }
       
       #globalLoading { color: #f28b82; font-weight: bold; margin-bottom: 15px; }
@@ -39,9 +50,14 @@
       
       <div id="globalLoading">🔄 正在連線至試算表載入圖鑑，請稍候...</div>
       
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="資料載入中..." onkeyup="handleTyping()" autocomplete="off" disabled>
-        <ul id="suggestionBox" class="suggestions"></ul>
+      <div class="search-wrapper">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="資料載入中..." onkeyup="handleTyping()" autocomplete="off" disabled>
+          <ul id="suggestionBox" class="suggestions"></ul>
+        </div>
+        <div class="filter-box">
+          <input type="number" id="reqLevelInput" placeholder="裝備 Lv." onkeyup="executeSearch()" disabled>
+        </div>
       </div>
 
       <button id="searchBtn" onclick="executeSearch()" disabled>一鍵搜查</button>
@@ -53,7 +69,7 @@
       var localDatabase = []; 
       var timer;
 
-      // 🔴 這裡必須是你剛剛複製的 GAS 網頁應用程式網址 (結尾是 /exec)
+      // 🔴 這裡必須是你複製的 GAS 網頁應用程式網址 (結尾是 /exec)
       var API_URL = "https://script.google.com/macros/s/AKfycbzDOHcqCkyaIaF47o4s7iXMnmn_sOLLkBaVphHtK1rViiqhSgHMd2H_eSharuLyM6U-/exec";
 
       window.onload = function() {
@@ -64,7 +80,8 @@
             
             document.getElementById('globalLoading').style.display = 'none';
             document.getElementById('searchInput').disabled = false;
-            document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱或屬性條件...";
+            document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱...";
+            document.getElementById('reqLevelInput').disabled = false;
             document.getElementById('searchBtn').disabled = false;
           })
           .catch(err => {
@@ -125,19 +142,37 @@
       });
 
       function executeSearch() {
-        var keyword = document.getElementById('searchInput').value;
-        if(!keyword) return;
+        var keyword = document.getElementById('searchInput').value.replace(/\s+/g, '').toLowerCase();
+        // 抓取等級篩選框的數字
+        var reqLv = document.getElementById('reqLevelInput').value;
+        
+        // 如果兩個框都沒填東西，就不執行搜尋
+        if(!keyword && !reqLv) return;
         
         document.getElementById('suggestionBox').style.display = 'none';
         var container = document.getElementById('results');
         container.innerHTML = '';
         
-        var cleanKeyword = keyword.replace(/\s+/g, '').toLowerCase();
         var resultData = [];
 
+        // 雙重條件篩選邏輯
         for (var i = 0; i < localDatabase.length; i++) {
-          if (localDatabase[i].searchStr.indexOf(cleanKeyword) !== -1) {
-            resultData.push(localDatabase[i]);
+          var d = localDatabase[i];
+          var matchKeyword = true;
+          var matchReqLv = true;
+
+          // 條件一：文字搜尋
+          if (keyword) {
+            matchKeyword = d.searchStr.indexOf(keyword) !== -1;
+          }
+          // 條件二：裝備等級搜尋 (如果有填的話，必須完全符合)
+          if (reqLv) {
+            matchReqLv = (d.reqLevel === reqLv);
+          }
+
+          // 兩個條件都過關，才放進結果裡
+          if (matchKeyword && matchReqLv) {
+            resultData.push(d);
           }
         }
         renderResults(resultData);
@@ -158,7 +193,15 @@
           
           htmlStr += '<div class="card-info">';
           htmlStr += '<span class="m-tag">[Lv. ' + d.level + '] ' + d.monster + '</span>';
-          htmlStr += '<h4>' + d.item + '</h4>';
+          
+          // 標題區：顯示道具名稱
+          htmlStr += '<h4><span>' + d.item + '</span>';
+          // 如果這項道具有裝備等級限制，就在名稱旁邊加上小標籤
+          if (d.reqLevel) { 
+            htmlStr += '<span class="req-tag">限制 Lv. ' + d.reqLevel + '</span>'; 
+          }
+          htmlStr += '</h4>';
+
           if (d.desc) { htmlStr += '<span class="item-desc">' + d.desc + '</span>'; }
           htmlStr += '</div>';
 
