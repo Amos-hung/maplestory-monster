@@ -7,8 +7,8 @@
     <style>
       body { font-family: '微軟正黑體', sans-serif; background-color: #181818; color: #e8eaed; margin: 0; padding: 20px; text-align: center; }
       
-      /* 將最大寬度放寬，以容納並排的網格卡片 */
-      .container { max-width: 1200px; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
+      /* 核心修改：寬度改為 100% 滿版，並加上 box-sizing 避免 padding 撐破版面 */
+      .container { width: 100%; max-width: 100%; margin: 0 auto; background: #242424; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; box-sizing: border-box; }
       h2 { color: #8ab4f8; } 
       
       .search-row { display: flex; gap: 10px; align-items: center; width: 100%; margin: 0 auto 15px auto; flex-wrap: wrap; justify-content: center; }
@@ -33,7 +33,7 @@
       .suggestions li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #444; color: #e8eaed; font-weight: bold; }
       .suggestions li:hover { background-color: #3c4043; color: #8ab4f8; }
 
-      /* --- 全新網格與卡片樣式 --- */
+      /* --- 網格與卡片樣式 --- */
       .result-list { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
@@ -122,7 +122,6 @@
       
       #globalLoading { color: #f28b82; font-weight: bold; margin-bottom: 15px; }
       
-      /* 修改筆數統計樣式，使其在網格中置頂橫跨所有欄位 */
       .result-count { 
         grid-column: 1 / -1; 
         color: #b0bec5; 
@@ -131,6 +130,21 @@
         text-align: right; 
         border-bottom: 1px solid #444;
         padding-bottom: 10px;
+      }
+
+      /* --- 新增：RWD 手機/平版專屬優化 --- */
+      @media (max-width: 768px) {
+        body { padding: 10px; } /* 縮小螢幕邊緣空白 */
+        .container { padding: 15px; } 
+        
+        /* 讓輸入框在手機上排列更緊湊 */
+        .search-row { gap: 8px; }
+        
+        /* 微調網格的最小寬度，讓手機版也能根據螢幕寬度自適應 1~2 排 */
+        .result-list { 
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+          gap: 12px; 
+        }
       }
     </style>
   </head>
@@ -314,85 +328,4 @@
           }
           
           renderResults(resultData);
-        }, 50);
-      }
-
-      function renderResults(data) {
-        var container = document.getElementById('results');
-        container.innerHTML = ''; 
-        
-        if(data.length === 0) {
-          container.innerHTML = '<p style="text-align:center; color:#f28b82; grid-column: 1 / -1; font-weight: bold;">資料庫中找不到符合的結果 😢</p>';
-          return;
-        }
-
-        var countHeader = document.createElement('div');
-        countHeader.className = 'result-count';
-        countHeader.innerText = '✅ 共找到 ' + data.length + ' 筆掉落物結果';
-        container.appendChild(countHeader);
-
-        // 核心改動：將排序後的結果依照「怪物」進行打包分組
-        var groupedData = {};
-        var order = []; // 用來紀錄怪物出現的順序，以維持排序效果
-        
-        for(var i = 0; i < data.length; i++) {
-          var d = data[i];
-          var mKey = d.monster; 
-          
-          if(!groupedData[mKey]) {
-            groupedData[mKey] = {
-              name: d.monster,
-              level: d.level,
-              image: d.image,
-              drops: []
-            };
-            order.push(mKey);
-          }
-          groupedData[mKey].drops.push(d);
-        }
-
-        var finalHtml = '';
-        for(var k = 0; k < order.length; k++) {
-          var mKey = order[k];
-          var mData = groupedData[mKey];
-          
-          var htmlStr = '<div class="monster-card">';
-          
-          // --- 怪物標頭區塊 ---
-          if (mData.image) { 
-            htmlStr += '<img class="monster-img" src="' + mData.image + '" onerror="this.style.display=\'none\'">'; 
-          }
-          htmlStr += '<div class="monster-name">' + mData.name + '</div>';
-          htmlStr += '<div class="monster-level">等級: ' + mData.level + '</div>';
-          
-          // --- 掉落物清單區塊 ---
-          htmlStr += '<div class="drop-container">';
-          for(var j = 0; j < mData.drops.length; j++) {
-            var drop = mData.drops[j];
-            htmlStr += '<div class="drop-item">';
-            
-            // 道具名稱與條件標籤
-            htmlStr += '<div><span class="drop-name">' + drop.item + '</span>';
-            if (drop.reqLevel && drop.reqLevel !== "") {
-              htmlStr += '<span class="drop-req">' + drop.reqLevel + '</span>';
-            }
-            htmlStr += '</div>';
-            
-            // 道具說明
-            if (drop.desc) {
-              htmlStr += '<div class="drop-desc">' + drop.desc + '</div>';
-            }
-            
-            htmlStr += '</div>'; // end drop-item
-          }
-          htmlStr += '</div>'; // end drop-container
-          
-          htmlStr += '</div>'; // end monster-card
-          finalHtml += htmlStr;
-        }
-        
-        container.insertAdjacentHTML('beforeend', finalHtml);
-      }
-    </script>
-  </body>
-</html>
+        },
