@@ -99,6 +99,18 @@
         font-weight: bold;
       }
       
+      /* 新增的職業標籤樣式 */
+      .drop-job {
+        display: inline-block;
+        background: #5c6bc0; /* 靛藍色系，區分等級標籤 */
+        color: #fff;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        vertical-align: middle;
+      }
+
       .drop-req {
         display: inline-block;
         background: #444;
@@ -180,6 +192,7 @@
       var localDatabase = []; 
       var timer;
 
+      // ⚠️ 請確保這是你最新的 GAS 部署網址
       var API_URL = "https://script.google.com/macros/s/AKfycbxgCiepnE53iqDgWgs8KUra5CSuEFwnTZ9peGDVlX7AoQ2ftQczxCG8War2lyfcq7F0/exec";
 
       document.addEventListener("DOMContentLoaded", function() {
@@ -196,7 +209,7 @@
             
             document.getElementById('globalLoading').style.display = 'none';
             document.getElementById('searchInput').disabled = false;
-            document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱...";
+            document.getElementById('searchInput').placeholder = "輸入怪物、道具名稱或職業...";
             document.getElementById('levelType').disabled = false;
             document.getElementById('minLevel').disabled = false;
             document.getElementById('maxLevel').disabled = false;
@@ -381,10 +394,19 @@
             var drop = mData.drops[j];
             htmlStr += '<div class="drop-item">';
             
+            // 🎯 新增的排版邏輯：裝備名稱、職業(如果有的話)、裝備限制
             htmlStr += '<div><span class="drop-name">' + drop.item + '</span>';
+            
+            // 如果有配對到職業，就畫出職業標籤
+            if (drop.job && drop.job !== "") {
+              htmlStr += '<span class="drop-job">' + drop.job + '</span>';
+            }
+            
+            // 裝備等級標籤
             if (drop.reqLevel && drop.reqLevel !== "") {
               htmlStr += '<span class="drop-req">' + drop.reqLevel + '</span>';
             }
+            
             htmlStr += '</div>';
             
             if (drop.desc) {
