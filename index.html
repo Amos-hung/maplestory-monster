@@ -34,7 +34,7 @@
 
       .result-list { 
         display: grid; 
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* 微調卡片最小寬度 */
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
         gap: 20px; 
         margin-top: 30px; 
         text-align: left;
@@ -93,19 +93,12 @@
         border-bottom: none;
       }
       
-      /* 🎯 全新排版：裝備標頭 (名稱左、標籤右) */
-      .drop-header {
-        display: flex;
-        justify-content: space-between; /* 左右撐開 */
-        align-items: flex-start;
-        margin-bottom: 5px;
-      }
-
-      /* 裝備名稱與圖片群組 */
+      /* 🎯 裝備名稱群組 (第一列) */
       .drop-name-group {
         display: flex;
         align-items: center;
         gap: 8px;
+        margin-bottom: 6px; /* 與下方的標籤列保持距離 */
       }
 
       .drop-item-img {
@@ -114,19 +107,23 @@
         object-fit: contain;
         border-radius: 4px;
         background-color: transparent;
+        flex-shrink: 0; /* 確保圖片不會被長標題擠壓 */
       }
 
       .drop-name {
         color: #e8eaed;
         font-size: 16px;
         font-weight: bold;
+        line-height: 1.3;
       }
 
-      /* 右上角標籤群組 */
-      .drop-tags {
+      /* 🎯 標籤群組 (獨立移到第二列) */
+      .drop-tags-row {
         display: flex;
         gap: 6px;
         align-items: center;
+        margin-bottom: 6px;
+        flex-wrap: wrap; /* 標籤太多時允許自動換行 */
       }
       
       .drop-job {
@@ -180,7 +177,7 @@
   </head>
   <body>
     <div class="container">
-      <h2>🔍 全能圖鑑搜尋 (裝備圖片+職色版)</h2>
+      <h2>🔍 全能圖鑑搜尋 (多排優化版)</h2>
       
       <div id="globalLoading">🔄 正在連線至試算表載入圖鑑，請稍候...</div>
       
@@ -217,7 +214,7 @@
       var localDatabase = []; 
       var timer;
 
-      // ⚠️ 如果你有換過 GAS 網址，記得把這裡替換成你最新的！
+      // ⚠️ 如果你有換過 GAS 網址，請確認是最新版
       var API_URL = "https://script.google.com/macros/s/AKfycbwEWiqm6bjN_vkf0yR4f_h0MG1tY8V7JWjJQ34MaGGyzE1VaXpTKxI2tlfmzp9yxRbl/exec";
 
       document.addEventListener("DOMContentLoaded", function() {
@@ -361,15 +358,14 @@
         }, 50);
       }
 
-      // 🎯 自動判斷職業並給予對應顏色的函數
       function getJobColor(jobStr) {
-        if (!jobStr) return '#5c6bc0'; // 預設藍紫
-        if (jobStr.indexOf('劍士') !== -1) return '#e53935';   // 紅色
-        if (jobStr.indexOf('法師') !== -1) return '#1e88e5';   // 藍色
-        if (jobStr.indexOf('弓箭手') !== -1) return '#43a047'; // 綠色
-        if (jobStr.indexOf('盜賊') !== -1) return '#8e24aa';   // 紫色
-        if (jobStr.indexOf('海盜') !== -1) return '#546e7a';   // 灰青色
-        if (jobStr.indexOf('初心者') !== -1) return '#757575'; // 灰色
+        if (!jobStr) return '#5c6bc0'; 
+        if (jobStr.indexOf('劍士') !== -1) return '#e53935';   
+        if (jobStr.indexOf('法師') !== -1) return '#1e88e5';   
+        if (jobStr.indexOf('弓箭手') !== -1) return '#43a047'; 
+        if (jobStr.indexOf('盜賊') !== -1) return '#8e24aa';   
+        if (jobStr.indexOf('海盜') !== -1) return '#546e7a';   
+        if (jobStr.indexOf('初心者') !== -1) return '#757575'; 
         return '#5c6bc0'; 
       }
 
@@ -425,10 +421,7 @@
             
             htmlStr += '<div class="drop-item">';
             
-            // 🎯 開始：裝備標頭 (名稱左、標籤右)
-            htmlStr += '<div class="drop-header">';
-            
-            // --- 左側：裝備圖片 + 裝備名稱 ---
+            // --- 第一列：圖片 + 裝備名稱 ---
             htmlStr += '<div class="drop-name-group">';
             if (drop.itemImage && drop.itemImage !== "") {
               htmlStr += '<img src="' + drop.itemImage + '" class="drop-item-img" onerror="this.style.display=\'none\'">';
@@ -436,22 +429,22 @@
             htmlStr += '<span class="drop-name">' + drop.item + '</span>';
             htmlStr += '</div>';
 
-            // --- 右側：標籤群組 (等級在前、職業在後) ---
-            htmlStr += '<div class="drop-tags">';
-            // 1. 裝備等級限制標籤
-            if (drop.reqLevel && drop.reqLevel !== "") {
-              htmlStr += '<span class="drop-req">' + drop.reqLevel + '</span>';
+            // --- 第二列：標籤群組 (等級前、職業後)，有資料才顯示 ---
+            if ((drop.reqLevel && drop.reqLevel !== "") || (drop.job && drop.job !== "")) {
+              htmlStr += '<div class="drop-tags-row">';
+              // 1. 等級標籤
+              if (drop.reqLevel && drop.reqLevel !== "") {
+                htmlStr += '<span class="drop-req">' + drop.reqLevel + '</span>';
+              }
+              // 2. 職業標籤
+              if (drop.job && drop.job !== "") {
+                var jobColor = getJobColor(drop.job);
+                htmlStr += '<span class="drop-job" style="background-color: ' + jobColor + ';">' + drop.job + '</span>';
+              }
+              htmlStr += '</div>';
             }
-            // 2. 職業標籤 (套用動態顏色)
-            if (drop.job && drop.job !== "") {
-              var jobColor = getJobColor(drop.job);
-              htmlStr += '<span class="drop-job" style="background-color: ' + jobColor + ';">' + drop.job + '</span>';
-            }
-            htmlStr += '</div>'; // end drop-tags
             
-            htmlStr += '</div>'; // end drop-header
-            // 🎯 結束：裝備標頭
-            
+            // --- 第三列：說明文案 ---
             if (drop.desc) {
               htmlStr += '<div class="drop-desc">' + drop.desc + '</div>';
             }
