@@ -52,12 +52,21 @@
         height: 800px; /* 鎖死一個你覺得舒適的高度 */
       }
       
+      /* 🎯 新增：給怪物圖片一個固定高度的「畫框」確保名字絕對對齊 */
+      .monster-img-box {
+        height: 75px; 
+        width: 100%;
+        display: flex;
+        align-items: center;      
+        justify-content: center;  
+        margin-bottom: 5px;
+      }
+      
       .monster-img {
-        height: 60px;
+        max-height: 100%;
         max-width: 100%;
         object-fit: contain;
         background-color: transparent; 
-        margin-bottom: 10px;
       }
       
       .monster-name {
@@ -432,9 +441,13 @@
           
           var htmlStr = '<div class="monster-card">';
           
+          // 🎯 圖片放進固定高度畫框
+          htmlStr += '<div class="monster-img-box">';
           if (mData.image) { 
             htmlStr += '<img class="monster-img" src="' + mData.image + '" onerror="this.style.display=\'none\'">'; 
           }
+          htmlStr += '</div>';
+          
           htmlStr += '<div class="monster-name">' + mData.name + '</div>';
           htmlStr += '<div class="monster-level">等級: ' + mData.level + '</div>';
           
