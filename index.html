@@ -40,6 +40,7 @@
         text-align: left;
       }
       
+      /* 🎯 鎖死卡片高度 */
       .monster-card { 
         background: #303134; 
         border: 1px solid #444; 
@@ -48,6 +49,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        height: 450px; /* 鎖死一個你覺得舒適的高度 */
       }
       
       .monster-img {
@@ -71,6 +73,7 @@
         margin-bottom: 15px;
       }
       
+      /* 🎯 讓掉落物區域產生內部捲軸 */
       .drop-container {
         width: 100%;
         border: 1px solid #5f6368; 
@@ -79,6 +82,18 @@
         background: #28292c;
         box-sizing: border-box;
         flex-grow: 1; 
+        overflow-y: auto; /* 內容超過時自動出現上下捲軸 */
+      }
+      /* 🎯 美化內部小捲軸 (避免預設捲軸太醜) */
+      .drop-container::-webkit-scrollbar {
+        width: 6px;
+      }
+      .drop-container::-webkit-scrollbar-thumb {
+        background: #5f6368; 
+        border-radius: 3px;
+      }
+      .drop-container::-webkit-scrollbar-track {
+        background: transparent; 
       }
       
       .drop-item {
