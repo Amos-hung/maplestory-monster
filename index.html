@@ -52,7 +52,7 @@
         height: 800px; /* 鎖死一個你覺得舒適的高度 */
       }
       
-      /* 🎯 新增：給怪物圖片一個固定高度的「畫框」確保名字絕對對齊 */
+      /* 🎯 怪物圖片固定畫框防護 */
       .monster-img-box {
         height: 75px; 
         width: 100%;
@@ -60,6 +60,7 @@
         align-items: center;      
         justify-content: center;  
         margin-bottom: 5px;
+        flex-shrink: 0; /* 🛡️ 關鍵防護：絕對不准被底下的清單擠扁！ */
       }
       
       .monster-img {
@@ -74,15 +75,17 @@
         font-size: 18px;
         font-weight: bold;
         margin-bottom: 5px;
+        flex-shrink: 0; /* 🛡️ 關鍵防護：保護名字不被往上推 */
       }
       
       .monster-level {
         color: #b0bec5;
         font-size: 13px;
         margin-bottom: 15px;
+        flex-shrink: 0; /* 🛡️ 關鍵防護：保護等級不被往上推 */
       }
       
-      /* 🎯 讓掉落物區域產生內部捲軸 */
+      /* 🎯 讓掉落物區域產生內部捲軸，並強制不准往上擠壓 */
       .drop-container {
         width: 100%;
         border: 1px solid #5f6368; 
@@ -91,9 +94,10 @@
         background: #28292c;
         box-sizing: border-box;
         flex-grow: 1; 
-        overflow-y: auto; /* 內容超過時自動出現上下捲軸 */
+        overflow-y: auto; 
+        min-height: 0; /* 🛡️ 關鍵防護：強制清單超過空間就產生捲軸，不准跟上面搶空間 */
       }
-      /* 🎯 美化內部小捲軸 (避免預設捲軸太醜) */
+      /* 🎯 美化內部小捲軸 */
       .drop-container::-webkit-scrollbar {
         width: 6px;
       }
@@ -122,7 +126,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 6px; /* 與下方的標籤列保持距離 */
+        margin-bottom: 6px; 
       }
 
       .drop-item-img {
@@ -131,7 +135,7 @@
         object-fit: contain;
         border-radius: 4px;
         background-color: transparent;
-        flex-shrink: 0; /* 確保圖片不會被長標題擠壓 */
+        flex-shrink: 0; 
       }
 
       .drop-name {
@@ -147,7 +151,7 @@
         gap: 6px;
         align-items: center;
         margin-bottom: 6px;
-        flex-wrap: wrap; /* 標籤太多時允許自動換行 */
+        flex-wrap: wrap; 
       }
       
       .drop-job {
@@ -156,10 +160,9 @@
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: bold;
-        /* 🎯 關鍵修改：允許換行並設定斷行規則 */
-        white-space: normal; 
+        white-space: normal;      /* 允許長標籤換行 */
         word-break: break-word;
-        line-height: 1.4; /* 讓換行後的文字不會上下擠在一起 */
+        line-height: 1.4; 
         display: inline-block;
       }
 
@@ -169,8 +172,7 @@
         font-size: 11px;
         padding: 3px 8px;
         border-radius: 4px;
-        /* 🎯 關鍵修改：允許換行並設定斷行規則 */
-        white-space: normal; 
+        white-space: normal;      /* 允許長標籤換行 */
         word-break: break-word;
         line-height: 1.4; 
         display: inline-block;
@@ -209,7 +211,7 @@
   </head>
   <body>
     <div class="container">
-      <h2>🔍 全能圖鑑搜尋 (多排優化版)</h2>
+      <h2>🔍 全能圖鑑搜尋 (終極優化版)</h2>
       
       <div id="globalLoading">🔄 正在連線至試算表載入圖鑑，請稍候...</div>
       
@@ -246,7 +248,7 @@
       var localDatabase = []; 
       var timer;
 
-      // ⚠️ 如果你有換過 GAS 網址，請確認是最新版
+      // ⚠️ 你的專屬 GAS 網址
       var API_URL = "https://script.google.com/macros/s/AKfycbwEWiqm6bjN_vkf0yR4f_h0MG1tY8V7JWjJQ34MaGGyzE1VaXpTKxI2tlfmzp9yxRbl/exec";
 
       document.addEventListener("DOMContentLoaded", function() {
