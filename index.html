@@ -132,7 +132,11 @@
         padding: 3px 8px;
         border-radius: 4px;
         font-weight: bold;
-        white-space: nowrap;
+        /* 🎯 關鍵修改：允許換行並設定斷行規則 */
+        white-space: normal; 
+        word-break: break-word;
+        line-height: 1.4; /* 讓換行後的文字不會上下擠在一起 */
+        display: inline-block;
       }
 
       .drop-req {
@@ -141,7 +145,11 @@
         font-size: 11px;
         padding: 3px 8px;
         border-radius: 4px;
-        white-space: nowrap;
+        /* 🎯 關鍵修改：允許換行並設定斷行規則 */
+        white-space: normal; 
+        word-break: break-word;
+        line-height: 1.4; 
+        display: inline-block;
       }
       
       .drop-desc {
