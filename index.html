@@ -40,7 +40,7 @@
         text-align: left;
       }
       
-      /* 🎯 鎖死卡片高度 */
+      /* 🎯 讓卡片高度保持彈性，但同排會自動等高 */
       .monster-card { 
         background: #303134; 
         border: 1px solid #444; 
@@ -49,7 +49,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        height: 800px; /* 鎖死一個你覺得舒適的高度 */
+        height: 100%; /* 🛡️ 關鍵：取代原本的 800px，讓它自動適應同排最高的那張卡片 */
+        box-sizing: border-box;
       }
       
       /* 🎯 怪物圖片固定畫框防護 */
@@ -85,7 +86,7 @@
         flex-shrink: 0; /* 🛡️ 關鍵防護：保護等級不被往上推 */
       }
       
-      /* 🎯 讓掉落物區域產生內部捲軸，並強制不准往上擠壓 */
+      /* 🎯 讓掉落物區域產生「有上限」的內部捲軸 */
       .drop-container {
         width: 100%;
         border: 1px solid #5f6368; 
@@ -95,7 +96,8 @@
         box-sizing: border-box;
         flex-grow: 1; 
         overflow-y: auto; 
-        min-height: 0; /* 🛡️ 關鍵防護：強制清單超過空間就產生捲軸，不准跟上面搶空間 */
+        min-height: 0; 
+        max-height: 450px; /* 🛡️ 關鍵：超過 450px 才會出現捲軸。沒超過時，它會乖乖縮短！(高度可自行微調) */
       }
       /* 🎯 美化內部小捲軸 */
       .drop-container::-webkit-scrollbar {
