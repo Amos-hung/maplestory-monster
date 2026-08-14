@@ -17,8 +17,8 @@ jobs:
 
       - name: Fetch latest data
         run: |
-          curl -s "https://script.google.com/macros/s/AKfycbwEWiqm6bjN_vkf0yR4f_h0MG1tY8V7JWjJQ34MaGGyzE1VaXpTKxI2tlfmzp9yxRbl/exec" -o data.json
-
+          curl -sL "https://script.google.com/macros/s/AKfycbwEWiqm6bjN_vkf0yR4f_h0MG1tY8V7JWjJQ34MaGGyzE1VaXpTKxI2tlfmzp9yxRbl/exec" -o data.json
+          
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
