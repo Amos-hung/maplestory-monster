@@ -251,10 +251,10 @@
       var timer;
 
       // ⚠️ 你的專屬 GAS 網址
-      var API_URL = "https://script.google.com/macros/s/AKfycbwEWiqm6bjN_vkf0yR4f_h0MG1tY8V7JWjJQ34MaGGyzE1VaXpTKxI2tlfmzp9yxRbl/exec";
+     
 
       document.addEventListener("DOMContentLoaded", function() {
-        fetch(API_URL)
+        fetch('./data.json')
           .then(response => response.json())
           .then(data => {
             localDatabase = data; 
